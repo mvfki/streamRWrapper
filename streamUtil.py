@@ -216,7 +216,7 @@ class streamSingleCellSamples(object):
                 self.adata.obs.at[cell, 'label_color'] = self.label2color[label]
     
     def __repr__(self):
-        return self.adata)
+        return self.adata
 
 class testClass(object):
     """docstring for testClass"""
