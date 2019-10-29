@@ -21,37 +21,49 @@ def rgb216(color):
     return c
 
 class streamSingleCellSamples(object):
-    """A streamSamples object stores information read and processed by stream 
-    package and wraps standard pipeline commands as method functions"""
-    def __init__(self, fileName, rawCount = True, cellLabel = None, 
-                 cellLabelColor = None):
-        '''Initialization
-        fileName       - Required. Only support cellranger MTX format for now. 
-                         The "barcodes.tsv" and "genes.tsv" file should be 
-                         located at the exactly same path and named exactly as 
-                         mentioned here.
-        rawCount       - Boolean, default True. If True, stream.normalize_per_
-                         cell() and stream.log_transform() will be performed. 
-                         Note that this normalization produces RPM values 
-                         rather than z-score. 
-        cellLabel      - A TSV file with a label each line, and each line 
+    """
+    A streamSamples object stores information read and processed by stream 
+    package and wraps standard pipeline commands as method functions
+    Values:
+        adata - anndata.AnnData Object. All stream original function that takes
+                an anndata.AnnData Object as an input argument can work by 
+                running st.function(streamSingleCellSamples.adata, arg2, ...). 
+    Initialization:
+        When initializing, basic filtration will be done, including removing 
+        duplicated obs and vars, removing mitochondria genes, and optional 
+        normalization. 
+        fileName       - str, required. 
+                         The file name of the cellranger MTX output. Only 
+                         support cellranger MTX format for now. The 
+                         "barcodes.tsv" and "genes.tsv" file should be located 
+                         at the exactly same path and named exactly as 
+                         mentioned here. 
+        cellLabel      - str, required. 
+                         A TSV file with a label each line, and each line 
                          corresponds to a cell in "barcodes.tsv".
-        cellLabelColor - A TSV file with each line written in "<label>\\t<hex-
-                         color-code>" format.'''
-        self.originalAdata = st.read(file_name = fileName, file_format = 'mtx')
-        st.add_cell_labels(self.originalAdata, file_name = cellLabel)
-        st.add_cell_colors(self.originalAdata, file_name = cellLabelColor)
-        self.originalAdata.var_names_make_unique()
-        self.originalAdata.obs_names_make_unique()
+        cellLabelColor - str, required. 
+                         A TSV file with each line written in "<label>\\t<hex-
+                         color-code>" format.
+        rawCount       - Boolean, optional (default: True). 
+                         If True, st.normalize_per_cell() and 
+                         st.log_transform() will be performed. Note that this 
+                         normalization produces RPM values rather than z-score.
+    """
+    def __init__(self, fileName, cellLabel, cellLabelColor, rawCount = True):
+        self.adata = st.read(file_name = fileName, file_format = 'mtx')
+        st.add_cell_labels(self.adata, file_name = cellLabel)
+        st.add_cell_colors(self.adata, file_name = cellLabelColor)
+        self.adata.var_names_make_unique()
+        self.adata.obs_names_make_unique()
         print('Raw input parsed...')
-        print(self.originalAdata)
-        self.nCells = self.originalAdata.n_obs
-        self.nGenes = self.originalAdata.n_vars
+        print(self.adata)
+        self.nCells = self.adata.n_obs
+        self.nGenes = self.adata.n_vars
         self._keepCurrentRecords()
-        st.remove_mt_genes(self.originalAdata)
+        st.remove_mt_genes(self.adata)
         if rawCount:
-            st.normalize_per_cell(self.originalAdata)
-            st.log_transform(self.originalAdata)
+            st.normalize_per_cell(self.adata)
+            st.log_transform(self.adata)
         self.backupDict = {}
         self.backupKey = 0
         self.backup(0)
@@ -59,13 +71,18 @@ class streamSingleCellSamples(object):
         print('Restore with self.restoreFromBackup()')
 
     def backup(self, key = None):
-        '''key - self.backupDict will have keys to identify different backup 
-                 version. If not specified, it will be an auto incremented int.
+        '''
+        Make a copy of the current anndata.AnnData Object. Can be restored by
+        streamSingleCellSamples.restoreFromBackup(key).
+        Arguments:
+        key - Hashable value (e.g. str or int), optional.  
+              self.backupDict will have keys to identify different backup 
+              version. If not specified, it will be an auto incremented int.
         '''
         sys.stderr.write('WARNING: Maintaining backup takes memory. \n')
         if key == None:
             self.backupKey += 1
-        tmp = copy.deepcopy(self.originalAdata)
+        tmp = copy.deepcopy(self.adata)
         self.backupDict[self.backupKey] = tmp
         if type(key) == str:
             key = '"' + key + '"'
@@ -73,12 +90,15 @@ class streamSingleCellSamples(object):
         print('Restore with self.restoreFromBackup(%s)' % str(key))
 
     def restoreFromBackup(self, key = 0):
-        self.originalAdata = copy.deepcopy(self.backupDict[key])
+        self.adata = copy.deepcopy(self.backupDict[key])
 
     def preprocess(self, min_num_genes = None, min_num_cells = None, 
-                   expr_cutoff = 1, loess_frac = 0.01, nb_pct = 0.1, 
-                   n_cluster = 15):
-        '''Do the filtration to the dataset. 
+                   expr_cutoff = 1, loess_frac = 0.01, n_genes = None,  
+                   nb_pct = 0.1, n_cluster = 15):
+        '''
+        Do the filtration, variable gene selection and dimension reduction to 
+        the dataset. By default it also performs a KMeans clustering for 
+        labeling small outlier groups. 
         Arguments:
         min_num_genes - int, optional (default: None). 
                         Minimum number of genes expressed. For filtering 
@@ -93,6 +113,9 @@ class streamSingleCellSamples(object):
                         The fraction of the data used when estimating each 
                         y-value in LOWESS function. For selecting variable 
                         genes. 
+        n_genes       - int, optional (default: None). 
+                        Number of variable genes to use. Will be automatically 
+                        detected by stream if not specified. 
         nb_pct        - float, optional (default: 0.1). 
                         The percentage neighbor cells. For doing MLLE 
                         dimension reduction. Smaller number such as 0.01 is 
@@ -102,22 +125,22 @@ class streamSingleCellSamples(object):
                         The number of cluster when it by default run a KMeans 
                         clustering to help remove the small outlier groups.  
         '''
-        st.filter_cells(self.originalAdata, min_num_genes = min_num_genes)
+        st.filter_cells(self.adata, min_num_genes = min_num_genes)
         if min_num_cells == None:
-            min_num_cells = int(round(self.originalAdata.shape[0] * 0.001))
-        st.filter_genes(self.originalAdata, min_num_cells = min_num_cells, expr_cutoff = expr_cutoff) # updated from default # Then back to default
-        st.select_variable_genes(self.originalAdata, loess_frac = loess_frac) # n_genes parameter updated
-        st.dimension_reduction(self.originalAdata, nb_pct = nb_pct)
+            min_num_cells = int(round(self.adata.shape[0] * 0.001))
+        st.filter_genes(self.adata, min_num_cells = min_num_cells, expr_cutoff = expr_cutoff)
+        st.select_variable_genes(self.adata, loess_frac = loess_frac, n_genes = n_genes)
+        st.dimension_reduction(self.adata, nb_pct = nb_pct)
         print('Initial UMAP visualization')
-        st.plot_visualization_2D(self.originalAdata, fig_legend_ncol = 4)
+        st.plot_visualization_2D(self.adata, fig_legend_ncol = 4)
         self.kmeans = KMeans(n_cluster = n_cluster, init = 'k-means++')
-        self.kmeans.fit(self.originalAdata.obsm['X_vis_umap'])
+        self.kmeans.fit(self.adata.obsm['X_vis_umap'])
         self._labelByCluster()
         print('Clustered UMAP visualization')
-        st.plot_visualization_2D(self.originalAdata, fig_legend_ncol = 4)
+        st.plot_visualization_2D(self.adata, fig_legend_ncol = 4)
         self.backup(key = 'kmeans')
-        print('If you want to remove some small groups of cells indicated by the ')
-        print('clustering, Run streamSingleCellSamples.removeSmallCluster([\'cN\', ...])')
+        print('If you want to remove some small groups of cells indicated by ')
+        print('the clustering, Run streamSingleCellSamples.removeSmallCluster([\'cN\', ...])')
         print('And then run streamSingleCellSamples.confirmRemoval()')
 
     def removeSmallCluster(self, clusters):
@@ -125,7 +148,6 @@ class streamSingleCellSamples(object):
         Remove the specified groups of cells from the dataset. Since the 
         coloring can be confusing sometimes, you can run this function 
         multiple times until you want to confirm.
-        
         Argument:
         clusters - a str or a list of str, Required.
                    The str(s) is/are the cluster label(s) which is/are shown  
@@ -134,46 +156,48 @@ class streamSingleCellSamples(object):
         self.restoreFromBackup('kmeans')
         cellToRemove = []
         if type(clusters) == str:
-            cellToRemove = list(self.originalAdata.obs['label'][self.originalAdata.obs['label'] == clusters].index)
+            cellToRemove = list(self.adata.obs['label'][self.adata.obs['label'] == clusters].index)
         elif type(clusters) == list:
             for c in clusters:
-                cellToRemove.extend(list(self.originalAdata.obs['label'][self.originalAdata.obs['label'] == c].index))
+                cellToRemove.extend(list(self.adata.obs['label'][self.adata.obs['label'] == c].index))
         cellToRemove = set(cellToRemove)
-        remain = set(self.originalAdata.obs.index).difference(cellToRemove)
+        remain = set(self.adata.obs.index).difference(cellToRemove)
         Idx = []
         for i in remain:
-            Idx.append(list(self.originalAdata.obs.index).index(i))
-        self.originalAdata._inplace_subset_obs(Idx)
+            Idx.append(list(self.adata.obs.index).index(i))
+        self.adata._inplace_subset_obs(Idx)
         print('Filtered and clustered UMAP visualization')
-        st.plot_visualization_2D(self.originalAdata, fig_legend_ncol = 4)
+        st.plot_visualization_2D(self.adata, fig_legend_ncol = 4)
         print('If you are good with the result, run streamSingleCellSamples.confirmRemoval()')
         
     def confirmRemoval(self):
-        '''Run this only when you are confirmed with the remove-by-clustering'''
+        '''
+        Run this only when you are confirmed with the remove-by-clustering. 
+        '''
         self.recoverRecords()
         print('Confirmed UMAP visualization')
-        st.plot_visualization_2D(self.originalAdata, fig_legend_ncol = 4)
+        st.plot_visualization_2D(self.adata, fig_legend_ncol = 4)
 
     def _labelByCluster(self):
         nC = self.kmeans.n_clusters
         palettes = sns.color_palette("husl", nC)
         palettes = [rgb216(c) for c in palettes]
-        self.originalAdata.obs['label'] = 'unknown'
-        self.originalAdata.obs['label_color'] = 'gray'
-        self.originalAdata.uns['label_color'] = {}
-        self.originalAdata.uns['label_color']['unknown'] = 'gray'
+        self.adata.obs['label'] = 'unknown'
+        self.adata.obs['label_color'] = 'gray'
+        self.adata.uns['label_color'] = {}
+        self.adata.uns['label_color']['unknown'] = 'gray'
         for i in range(nC):
             c0 = np.where(self.kmeans.labels_ == i)[0]
             label = 'c' + str(i)
-            self.originalAdata.obs['label'][c0] = label
-            self.originalAdata.obs['label_color'][c0] = palettes[i]
-            self.originalAdata.uns['label_color'][label] = palettes[i]
+            self.adata.obs['label'][c0] = label
+            self.adata.obs['label_color'][c0] = palettes[i]
+            self.adata.uns['label_color'][label] = palettes[i]
 
     def _keepCurrentRecords(self):
-        self.allCells = self.originalAdata.obs.index.to_list()
+        self.allCells = self.adata.obs.index.to_list()
         self.label2cells = defaultdict(set)
         self.label2color = {}
-        for cell, info in self.originalAdata.obs.iterrows():
+        for cell, info in self.adata.obs.iterrows():
             self.label2cells[info['label']].add(cell)
             if info['label'] in self.label2color:
                 if self.label2color[info['label']] != info['label_color']:
@@ -183,16 +207,16 @@ class streamSingleCellSamples(object):
                 self.label2color[info['label']] = info['label_color']
 
     def _recoverRecords(self):
-        self.originalAdata.uns['label_color'] = self.label2color
-        existingCells = set(self.originalAdata.obs.index.to_list())
+        self.adata.uns['label_color'] = self.label2color
+        existingCells = set(self.adata.obs.index.to_list())
         for label, cellSet in self.label2cells.items():
             cellSet = cellSet.intersection(existingCells)
             for cell in cellSet:
-                self.originalAdata.obs.at[cell, 'label'] = label
-                self.originalAdata.obs.at[cell, 'label_color'] = self.label2color[label]
+                self.adata.obs.at[cell, 'label'] = label
+                self.adata.obs.at[cell, 'label_color'] = self.label2color[label]
     
     def __repr__(self):
-        return self(self.originalAdata)
+        return self.adata)
 
 class testClass(object):
     """docstring for testClass"""
