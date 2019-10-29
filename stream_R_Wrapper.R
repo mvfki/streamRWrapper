@@ -4,8 +4,13 @@
 
 library(reticulate)
 # Load Everything needed from Python scripts
-use_virtualenv("STREAM")
+use_virtualenv("STREAM") #TODO: This one seems still not working. For now run `conda activate STREAM` first before doing anything
+
 source_python('streamUtil.py')
+
+obj <- streamSingleCellSamples('testData/matrix.mtx', 'testData/cell_label.tsv', 'testData/cell_label_color.tsv')
+obj$adata
+
 # Note that after trying a bit, a Python function is actually easy to invoke.
 # But nothing visible is saved in R workspace except the physical memory
 # address of the functions and variables.
