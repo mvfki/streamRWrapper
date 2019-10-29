@@ -1,11 +1,11 @@
 import sys
-#import stream as st
+import stream as st
 import seaborn as sns
 import numpy as np
 from sklearn.cluster import KMeans
 from collections import OrderedDict, defaultdict
 import copy
-#import anndata
+import anndata
 
 def rgb216(color):
     '''Mainly for converting seaborn RGB color code (from 0 to 1) to 
@@ -47,28 +47,32 @@ class streamSingleCellSamples(object):
         if rawCount:
             st.normalize_per_cell(self.originalAdata)
             st.log_transform(self.originalAdata)
-        self.backup = {}
+        self.backupDict = {}
         self.backupKey = 0
-        self.backup[0] = copy.deepcopy(self.originalAdata)
+        self.backup(0)
         print('Initial backup saved with key: 0')
         print('Restore with self.restoreFromBackup()')
 
     def backup(self, key = None):
+        '''key - self.backupDict will have keys to identify different backup 
+                 version. If not specified, it will be an auto incremented int.
+        '''
         sys.stderr.write('WARNING: Maintaining backup takes memory. \n')
         if key == None:
             self.backupKey += 1
         tmp = copy.deepcopy(self.originalAdata)
-        self.backup[self.backupKey] = tmp
+        self.backupDict[self.backupKey] = tmp
         if type(key) == str:
             key = '"' + key + '"'
         print('Current results backuped with key:', key)
         print('Restore with self.restoreFromBackup(%s)' % str(key))
 
     def restoreFromBackup(self, key = 0):
-        self.originalAdata = copy.deepcopy(self.backup)
+        self.originalAdata = copy.deepcopy(self.backupDict[key])
 
     def preprocess(self, min_num_genes = None, min_num_cells = None, 
-                   expr_cutoff = 1, loess_frac = 0.01, nb_pct = 0.1):
+                   expr_cutoff = 1, loess_frac = 0.01, nb_pct = 0.1, 
+                   n_cluster = 15):
         '''Do the filtration to the dataset. 
         Arguments:
         min_num_genes - int, optional (default: None). 
@@ -98,14 +102,65 @@ class streamSingleCellSamples(object):
         st.dimension_reduction(self.originalAdata, nb_pct = nb_pct)
         print('Initial UMAP visualization')
         st.plot_visualization_2D(self.originalAdata, fig_legend_ncol = 4)
-        #TODO KMeans
+        self.kmeans = KMeans(n_cluster = n_cluster, init = 'k-means++')
+        self.kmeans.fit(self.originalAdata.obsm['X_vis_umap'])
+        self._labelByCluster()
+        print('Clustered UMAP visualization')
+        st.plot_visualization_2D(self.originalAdata, fig_legend_ncol = 4)
+        self.backup(key = 'kmeans')
+        print('If you want to remove some small groups of cells indicated by the ')
+        print('clustering, Run streamSingleCellSamples.removeSmallCluster([\'cN\', ...])')
+        print('And then run streamSingleCellSamples.confirmRemoval()')
 
     def removeSmallCluster(self):
-        pass
-    
+        self.restoreFromBackup('kmeans')
+        cellToRemove = []
+        if type(clusters) == str:
+            cellToRemove = list(self.originalAdata.obs['label'][self.originalAdata.obs['label'] == clusters].index)
+        elif type(clusters) == list:
+            for c in clusters:
+                cellToRemove.extend(list(self.originalAdata.obs['label'][self.originalAdata.obs['label'] == c].index))
+        cellToRemove = set(cellToRemove)
+        remain = set(self.originalAdata.obs.index).difference(cellToRemove)
+        Idx = []
+        for i in remain:
+            Idx.append(list(self.originalAdata.obs.index).index(i))
+        self.originalAdata._inplace_subset_obs(Idx)
+        print('Filtered and clustered UMAP visualization')
+        st.plot_visualization_2D(self.originalAdata, fig_legend_ncol = 4)
+        print('If you are good with the result, run streamSingleCellSamples.confirmRemoval()')
+        
     def confirmRemoval(self):
-        pass
+        self.recoverRecords()
+        print('Confirmed UMAP visualization')
+        st.plot_visualization_2D(self.originalAdata, fig_legend_ncol = 4)
+
+    def _labelByCluster(self):
+        '''Change the sample labels in place. This function supports labeling the 
+        cell's from an sklearn.cluster.KMeans object. Probably will also work with
+        other sklearn.cluster methods but not tested yet. 
+        Input
+            adata  - anndata.AnnData object
+            kmeans - sklearn.cluster.KMeans object, where you should have already 
+                     run "KMeans.fit(adata.obsm['X_vis_umap'])"
     
+        As a result, the label in the input anndata.AnnData object will be changed 
+        automatically to 'c0', 'c1', 'c2', ... pattern. 
+        '''
+        nC = self.kmeans.n_clusters
+        palettes = sns.color_palette("husl", nC)
+        palettes = [rgb216(c) for c in palettes]
+        self.originalAdata.obs['label'] = 'unknown'
+        self.originalAdata.obs['label_color'] = 'gray'
+        self.originalAdata.uns['label_color'] = {}
+        self.originalAdata.uns['label_color']['unknown'] = 'gray'
+        for i in range(nC):
+            c0 = np.where(self.kmeans.labels_ == i)[0]
+            label = 'c' + str(i)
+            self.originalAdata.obs['label'][c0] = label
+            self.originalAdata.obs['label_color'][c0] = palettes[i]
+            self.originalAdata.uns['label_color'][label] = palettes[i]
+
     def _keepCurrentRecords(self):
         self.allCells = self.originalAdata.obs.index.to_list()
         self.label2cells = defaultdict(set)
@@ -127,6 +182,9 @@ class streamSingleCellSamples(object):
             for cell in cellSet:
                 self.originalAdata.obs.at[cell, 'label'] = label
                 self.originalAdata.obs.at[cell, 'label_color'] = self.label2color[label]
+    
+    def __repr__(self):
+        return self(self.originalAdata)
 
 def labelByCluster(adata, kmeans):
     '''Change the sample labels in place. This function supports labeling the 
