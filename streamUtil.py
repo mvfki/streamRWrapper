@@ -1,3 +1,8 @@
+'''In this script there are some customized functions for using stream to do 
+single-cell analysis, though stream itself is already a function wrapper for
+performing everything
+Reference link for stream: https://github.com/pinellolab/STREAM
+'''
 import sys
 import stream as st
 import seaborn as sns
@@ -92,7 +97,10 @@ class streamSingleCellSamples(object):
                         The percentage neighbor cells. For doing MLLE 
                         dimension reduction. Smaller number such as 0.01 is 
                         recommended when dealing with large dataset with more 
-                        than 10,000 cells. 
+                        than 10,000 cells.
+        n_cluster     - int, optional (default: 15). 
+                        The number of cluster when it by default run a KMeans 
+                        clustering to help remove the small outlier groups.  
         '''
         st.filter_cells(self.originalAdata, min_num_genes = min_num_genes)
         if min_num_cells == None:
@@ -112,7 +120,17 @@ class streamSingleCellSamples(object):
         print('clustering, Run streamSingleCellSamples.removeSmallCluster([\'cN\', ...])')
         print('And then run streamSingleCellSamples.confirmRemoval()')
 
-    def removeSmallCluster(self):
+    def removeSmallCluster(self, clusters):
+        '''
+        Remove the specified groups of cells from the dataset. Since the 
+        coloring can be confusing sometimes, you can run this function 
+        multiple times until you want to confirm.
+        
+        Argument:
+        clusters - a str or a list of str, Required.
+                   The str(s) is/are the cluster label(s) which is/are shown  
+                   in the clustered UMAP visualization.
+        '''
         self.restoreFromBackup('kmeans')
         cellToRemove = []
         if type(clusters) == str:
@@ -131,22 +149,12 @@ class streamSingleCellSamples(object):
         print('If you are good with the result, run streamSingleCellSamples.confirmRemoval()')
         
     def confirmRemoval(self):
+        '''Run this only when you are confirmed with the remove-by-clustering'''
         self.recoverRecords()
         print('Confirmed UMAP visualization')
         st.plot_visualization_2D(self.originalAdata, fig_legend_ncol = 4)
 
     def _labelByCluster(self):
-        '''Change the sample labels in place. This function supports labeling the 
-        cell's from an sklearn.cluster.KMeans object. Probably will also work with
-        other sklearn.cluster methods but not tested yet. 
-        Input
-            adata  - anndata.AnnData object
-            kmeans - sklearn.cluster.KMeans object, where you should have already 
-                     run "KMeans.fit(adata.obsm['X_vis_umap'])"
-    
-        As a result, the label in the input anndata.AnnData object will be changed 
-        automatically to 'c0', 'c1', 'c2', ... pattern. 
-        '''
         nC = self.kmeans.n_clusters
         palettes = sns.color_palette("husl", nC)
         palettes = [rgb216(c) for c in palettes]
@@ -186,56 +194,6 @@ class streamSingleCellSamples(object):
     def __repr__(self):
         return self(self.originalAdata)
 
-def labelByCluster(adata, kmeans):
-    '''Change the sample labels in place. This function supports labeling the 
-    cell's from an sklearn.cluster.KMeans object. Probably will also work with
-    other sklearn.cluster methods but not tested yet. 
-    Input
-        adata  - anndata.AnnData object
-        kmeans - sklearn.cluster.KMeans object, where you should have already 
-                 run "KMeans.fit(adata.obsm['X_vis_umap'])"
-
-    As a result, the label in the input anndata.AnnData object will be changed 
-    automatically to 'c0', 'c1', 'c2', ... pattern. 
-    '''
-    nC = kmeans.n_clusters
-    palettes = sns.color_palette("husl", nC)
-    palettes = [rgb216(c) for c in palettes]
-    adata.obs['label'] = 'unknown'
-    adata.obs['label_color'] = 'gray'
-    adata.uns['label_color'] = {}
-    adata.uns['label_color']['unknown'] = 'gray'
-    for i in range(nC):
-        c0 = np.where(kmeans.labels_ == i)[0]
-        label = 'c' + str(i)
-        adata.obs['label'][c0] = label
-        adata.obs['label_color'][c0] = palettes[i]
-        adata.uns['label_color'][label] = palettes[i]
-
-def removeCellsByLabel(adata, labels):
-    '''In place remove all the cell with the given labels from the input 
-    anndata.AnnData object. Usually used when having done a clustering and you 
-    want to remove some clusters. 
-
-    Input
-        adata    - anndata.AnnData object
-        labels - a str or a list. If a str, it should be exactly the label 
-                   for that cluster, usually 'c0', 'c1', ... If a list, it 
-                   should be a list of labels that exist.
-    '''
-    cellToRemove = []
-    if type(labels) == str:
-        cellToRemove = list(adata.obs['label'][adata.obs['label'] == labels].index)
-    elif type(labels) == list:
-        for c in labels:
-            cellToRemove.extend(list(adata.obs['label'][adata.obs['label'] == c].index))
-    cellToRemove = set(cellToRemove)
-    remain = set(adata.obs.index).difference(cellToRemove)
-    Idx = []
-    for i in remain:
-        Idx.append(list(adata.obs.index).index(i))
-    adata._inplace_subset_obs(Idx)
-
 class testClass(object):
     """docstring for testClass"""
     def __init__(self, arg):
@@ -248,7 +206,6 @@ class testClass(object):
     def func2(self, arg2):
         self.arg += arg2
         return self.arg
-        
 
 def testFunc(integer):
     integer = int(integer)
