@@ -55,6 +55,8 @@ class streamSingleCellSamples(object):
         st.add_cell_colors(self.adata, file_name = cellLabelColor)
         self.adata.var_names_make_unique()
         self.adata.obs_names_make_unique()
+        self.allCells = self.adata.obs.index.to_list()
+        self.allGenes = self.adata.var.index.to_list()
         print('Raw input parsed...')
         print(self.adata)
         self.nCells = self.adata.n_obs
@@ -69,28 +71,6 @@ class streamSingleCellSamples(object):
         self.backup(0)
         print('Initial backup saved with key: 0')
         print('Restore with self.restoreFromBackup()')
-
-    def backup(self, key = None):
-        '''
-        Make a copy of the current anndata.AnnData Object. Can be restored by
-        streamSingleCellSamples.restoreFromBackup(key).
-        Arguments:
-        key - Hashable value (e.g. str or int), optional.  
-              self.backupDict will have keys to identify different backup 
-              version. If not specified, it will be an auto incremented int.
-        '''
-        sys.stderr.write('WARNING: Maintaining backup takes memory. \n')
-        if key == None:
-            self.backupKey += 1
-        tmp = copy.deepcopy(self.adata)
-        self.backupDict[self.backupKey] = tmp
-        if type(key) == str:
-            key = '"' + key + '"'
-        print('Current results backuped with key:', key)
-        print('Restore with self.restoreFromBackup(%s)' % str(key))
-
-    def restoreFromBackup(self, key = 0):
-        self.adata = copy.deepcopy(self.backupDict[key])
 
     def preprocess(self, min_num_genes = None, min_num_cells = None, 
                    expr_cutoff = 1, loess_frac = 0.01, n_genes = None,  
@@ -143,6 +123,28 @@ class streamSingleCellSamples(object):
         print('the clustering, Run streamSingleCellSamples.removeSmallCluster([\'cN\', ...])')
         print('And then run streamSingleCellSamples.confirmRemoval()')
 
+    def backup(self, key = None):
+        '''
+        Make a copy of the current anndata.AnnData Object. Can be restored by
+        streamSingleCellSamples.restoreFromBackup(key).
+        Arguments:
+        key - Hashable value (e.g. str or int), optional.  
+              self.backupDict will have keys to identify different backup 
+              version. If not specified, it will be an auto incremented int.
+        '''
+        sys.stderr.write('WARNING: Maintaining backup takes memory. \n')
+        if key == None:
+            self.backupKey += 1
+        tmp = copy.deepcopy(self.adata)
+        self.backupDict[self.backupKey] = tmp
+        if type(key) == str:
+            key = '"' + key + '"'
+        print('Current results backuped with key:', key)
+        print('Restore with self.restoreFromBackup(%s)' % str(key))
+
+    def restoreFromBackup(self, key = 0):
+        self.adata = copy.deepcopy(self.backupDict[key])
+
     def removeSmallCluster(self, clusters):
         '''
         Remove the specified groups of cells from the dataset. Since the 
@@ -194,7 +196,7 @@ class streamSingleCellSamples(object):
             self.adata.uns['label_color'][label] = palettes[i]
 
     def _keepCurrentRecords(self):
-        self.allCells = self.adata.obs.index.to_list()
+        
         self.label2cells = defaultdict(set)
         self.label2color = {}
         for cell, info in self.adata.obs.iterrows():
@@ -216,20 +218,29 @@ class streamSingleCellSamples(object):
                 self.adata.obs.at[cell, 'label_color'] = self.label2color[label]
     
     def __repr__(self):
-        return self.adata
+        return str(self.adata)
+
+    def __str__(self):
+        return str(self.adata)
 
 class testClass(object):
     """docstring for testClass"""
     def __init__(self, arg):
         super(testClass, self).__init__()
         self.arg = arg
+        self.history = [self.arg]
 
     def func1(self):
+        self.history.append(self.arg)
         return self.arg
 
     def func2(self, arg2):
         self.arg += arg2
+        self.history.append(self.arg)
         return self.arg
+
+    def __getitem__(self, key):
+        return self.history[key]
 
 def testFunc(integer):
     integer = int(integer)

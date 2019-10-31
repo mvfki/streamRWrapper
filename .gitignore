@@ -1,2 +1,4 @@
 *.pyc
 */__pycache__
+stream_result/
+.Rhistory
