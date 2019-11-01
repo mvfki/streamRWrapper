@@ -107,7 +107,7 @@ class streamSingleCellSamples(object):
         '''
         st.filter_cells(self.adata, min_num_genes = min_num_genes)
         if min_num_cells == None:
-            min_num_cells = int(round(self.adata.shape[0] * 0.001))
+            min_num_cells = max(5, int(round(self.adata.shape[0] * 0.001)))
         st.filter_genes(self.adata, min_num_cells = min_num_cells, expr_cutoff = expr_cutoff)
         st.select_variable_genes(self.adata, loess_frac = loess_frac, n_genes = n_genes)
         st.dimension_reduction(self.adata, nb_pct = nb_pct)
