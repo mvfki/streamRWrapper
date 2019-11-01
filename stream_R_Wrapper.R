@@ -13,12 +13,17 @@ Sys.setenv(LD_LIBRARY_PATH="~/.conda/envs/STREAM/lib/")
 
 #####These commands worked on my local but not yet on SCC4######################
 #####Functions that work and might be useful####################################
-defaultMinNumCells <- function(adata) {
-    shapeFactor <- adata$n_obs
-    toCompare <- c(5, shapeFactor)
-    ans <- max(toCompare)
-    return(ans)
+converAdata <- function(PyAnnData) {
+    # This function creates/updates an RAnnData Object from the given AnnData
+    # from Python. 
+    #TODO Not finished yet! Solve the PyAnnData$obsm parsing!
+    RAnnData <- new("RAnnData", X = PyAnnData$X, obs = PyAnnData$obs, 
+                    var = PyAnnData$var, uns = PyAnnData$uns)
+    return(RAnnData)
 }
+
+setClass("RAnnData", slots = c(X = "matrix", obs = "data.frame", 
+                            var = 'data.frame', uns = 'list'))
 ################################################################################
 st <- import('stream')
 adata <- st$read('testData/matrix.mtx', file_format = 'mtx')
@@ -37,6 +42,10 @@ st$filter_genes(adata, min_num_cells = max(1L, adata$n_obs * 0.001))
 # Python. 
 st$select_variable_genes(adata, n_genes = min(2000L, adata$n_vars))
 st$dimension_reduction(adata, nb_pct = 0.01)
+
+# Anyway, after this I will definitely need some R stuffs to convert Python 
+# Object information to R callable objects. 
+
 #####DEBUGGING AREA#############################################################
 
 library(methods)
