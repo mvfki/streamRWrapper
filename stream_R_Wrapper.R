@@ -13,7 +13,7 @@ Sys.setenv(LD_LIBRARY_PATH="~/.conda/envs/STREAM/lib/")
 
 #####These commands worked on my local but not yet on SCC4######################
 #####Functions that work and might be useful####################################
-converAdata <- function(PyAnnData) {
+convertAdata <- function(PyAnnData) {
     # This function creates/updates an RAnnData Object from the given AnnData
     # from Python. 
     #TODO Not finished yet! Solve the PyAnnData$obsm parsing!
@@ -25,7 +25,7 @@ converAdata <- function(PyAnnData) {
 
 setClass("RAnnData", slots = c(X = "matrix", obs = "data.frame", 
                                var = 'data.frame', uns = 'list', obsm = 'list'))
-plotUMAP2D <- function(Adata) {
+plotUMAP2D <- function(Adata, method = 'mlle') {
     if ((class(Adata) == c("anndata.core.anndata.AnnData", 
                            "python.builtin.object"))[1] && 
         (class(Adata) == c("anndata.core.anndata.AnnData", 
@@ -33,7 +33,8 @@ plotUMAP2D <- function(Adata) {
         # Condition that the input adata is the Python AnnData Object. 
         if (is.null(adata$obsm$get('X_vis_umap'))) {
             write('Calculating with method: MLLE', stdout())
-            st$plot_visualization_2D(Adata)
+            # TODO support other methods later
+            st$plot_visualization_2D(Adata, method = method)
         } else {
         }
         write('Importing calculated UMAP visualization', stdout())
@@ -62,9 +63,9 @@ Object in Python space, or an RAnnData Object converted from Python). ")
 }
 ################################################################################
 st <- import('stream')
-adata <- st$read('bal1/matrix.mtx', file_format = 'mtx')
-st$add_cell_labels(adata, file_name = 'bal1/cell_label.tsv')
-st$add_cell_colors(adata, file_name = 'bal1/cell_label_color.tsv')
+adata <- st$read('testData_real/matrix.mtx', file_format = 'mtx')
+st$add_cell_labels(adata, file_name = 'testData_real/cell_label.tsv')
+st$add_cell_colors(adata, file_name = 'testData_real/cell_label_color.tsv')
 adata$obs_names_make_unique()
 adata$var_names_make_unique()
 st$remove_mt_genes(adata)
@@ -75,7 +76,7 @@ st$filter_cells(adata)
 st$filter_genes(adata, min_num_cells = max(1L, adata$n_obs * 0.001))
 st$select_variable_genes(adata, n_genes = min(2000L, adata$n_vars))
 st$dimension_reduction(adata, nb_pct = 0.01)
-plotUMAP2D(adata)
+plotUMAP2D(Radata)
 Radata <- convertAdata(adata)
 
 #####DEBUGGING AREA#############################################################
