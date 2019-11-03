@@ -4,7 +4,7 @@
 # from R. I guess now what I want to do is to just run the same thing here and 
 # reproduce the results that I can get from directly running in Python. 
 # Next thing to do is to make things more R, including converting Python Objects
-# saved visualable in R, callable with R functions. 
+# saved visualizable in R, callable with R functions. 
 
 # This first section would save the commands that worked everywhere so far.
 library(reticulate)
@@ -18,17 +18,53 @@ converAdata <- function(PyAnnData) {
     # from Python. 
     #TODO Not finished yet! Solve the PyAnnData$obsm parsing!
     RAnnData <- new("RAnnData", X = PyAnnData$X, obs = PyAnnData$obs, 
-                    var = PyAnnData$var, uns = PyAnnData$uns)
+                    var = PyAnnData$var, uns = PyAnnData$uns, 
+                    obsm = PyAnnData$obsm$as_dict())
     return(RAnnData)
 }
 
 setClass("RAnnData", slots = c(X = "matrix", obs = "data.frame", 
-                            var = 'data.frame', uns = 'list'))
+                               var = 'data.frame', uns = 'list', obsm = 'list'))
+plotUMAP2D <- function(Adata) {
+    if ((class(Adata) == c("anndata.core.anndata.AnnData", 
+                           "python.builtin.object"))[1] && 
+        (class(Adata) == c("anndata.core.anndata.AnnData", 
+                           "python.builtin.object"))[2]) {
+        # Condition that the input adata is the Python AnnData Object. 
+        if (is.null(adata$obsm$get('X_vis_umap'))) {
+            write('Calculating with method: MLLE', stdout())
+            st$plot_visualization_2D(Adata)
+        } else {
+        }
+        write('Importing calculated UMAP visualization', stdout())
+        Vis <- Adata$obsm$get("X_vis_umap")
+        uniqLabels <- unique(Adata$obs$label)
+        allColors <- Adata$obs$label_color
+    } else if (class(Adata) == 'RAnnData') {
+        if (is.null(Adata@obsm$X_vis_umap)) {
+            stop("The UMAP visualization arrays are not found in the input 
+RAnnData. Try input the Python adata.AnnData Object and then use 
+convertAdata(adata) to get the visualizable RAnnData")
+        } else {
+            Vis <- Adata@obsm$X_vis_umap
+            uniqLabels <- unique(Adata@obs$label)
+            allColors <- Adata@obs$label_color
+        }
+    } else {
+        stop("Please give a correct AnnData Object (either an anndata.AnnData 
+Object in Python space, or an RAnnData Object converted from Python). ")
+    }
+    par(mar = c(3, 3, 1, 1))
+    plot(Vis[,1], Vis[,2], pch = 16, cex=0.8, col = allColors, xlab = '', 
+         ylab = '')
+    legend("topright", legend = uniqLabels, pch = 16, col = unique(allColors), 
+           bty = 'n', cex=0.8)
+}
 ################################################################################
 st <- import('stream')
-adata <- st$read('testData/matrix.mtx', file_format = 'mtx')
-st$add_cell_labels(adata, file_name = 'testData/cell_label.tsv')
-st$add_cell_colors(adata, file_name = 'testData/cell_label_color.tsv')
+adata <- st$read('bal1/matrix.mtx', file_format = 'mtx')
+st$add_cell_labels(adata, file_name = 'bal1/cell_label.tsv')
+st$add_cell_colors(adata, file_name = 'bal1/cell_label_color.tsv')
 adata$obs_names_make_unique()
 adata$var_names_make_unique()
 st$remove_mt_genes(adata)
@@ -37,24 +73,9 @@ st$log_transform(adata)
 st$filter_cells(adata)
 # In small test case I say "1" there, but in real data remember to say "5". 
 st$filter_genes(adata, min_num_cells = max(1L, adata$n_obs * 0.001))
-# The "L" after the integer in the following line is important as it specifies
-# the datatype as integer rather than a float which might not be accepbtable in 
-# Python. 
 st$select_variable_genes(adata, n_genes = min(2000L, adata$n_vars))
 st$dimension_reduction(adata, nb_pct = 0.01)
-
-# Anyway, after this I will definitely need some R stuffs to convert Python 
-# Object information to R callable objects. 
+plotUMAP2D(adata)
+Radata <- convertAdata(adata)
 
 #####DEBUGGING AREA#############################################################
-
-library(methods)
-setClass("AnnData", representation(a = "character", b = "numeric"))
-readMTX <- function(fileName = "character") {
-    # This function would run the Python stream.read(), and then from the
-    # Python side access some basic informations and save them in the AnnData
-    # class instance defined here.
-    adata <- new("AnnData")
-    return(adata)
-}
-x <- readMTX()
