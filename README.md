@@ -11,3 +11,6 @@ $ conda config --add channels conda-forge
 $ conda create -n STREAM python=3.6 stream jupyter
 $ conda activate STREAM
 ```
+
+## Features  
+In `stream_R_Wrapper.R`, there is a pipeline that follows the [STREAM suggestions](https://nbviewer.jupyter.org/github/pinellolab/STREAM/blob/master/tutorial/1.STREAM_scRNA-seq.ipynb?flush_cache=true), and functions such as one for converting an Python [AnnData](https://github.com/theislab/anndata) object to R's [SingleCellExperiment](https://bioconductor.org/packages/devel/bioc/vignettes/SingleCellExperiment/inst/doc/intro.html) object which is widely used. 
