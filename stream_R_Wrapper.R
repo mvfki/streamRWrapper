@@ -40,10 +40,8 @@ setClass("RAnnData", slots = c(X = "matrix", obs = "data.frame",
                                var = 'data.frame', uns = 'list', obsm = 'list'))
 
 plotUMAP2D <- function(Adata) {
-    if ((class(Adata) == c("anndata.core.anndata.AnnData", 
-                           "python.builtin.object"))[1] && 
-        (class(Adata) == c("anndata.core.anndata.AnnData", 
-                           "python.builtin.object"))[2]) {
+    AnnDataClass <- c("anndata.core.anndata.AnnData", "python.builtin.object")
+    if (!(FALSE %in% (class(adata) == AnnDataClass))) {
         # Condition that the input adata is the Python AnnData Object. 
         if (is.null(adata$obsm$get('X_vis_umap'))) {
             write('Calculating...', stdout())
@@ -79,10 +77,8 @@ Object in Python space, or an RAnnData Object converted from Python). ")
 adata2sce <- function(PyAnnData) {
     ## Wrap a Python anndata.AnnData object to SingleCellExperiment object
     # First check if the input data is parsable. 
-    if ((class(PyAnnData) == c("anndata.core.anndata.AnnData", 
-                               "python.builtin.object"))[1] && 
-        (class(PyAnnData) == c("anndata.core.anndata.AnnData", 
-                               "python.builtin.object"))[2]) {
+    AnnDataClass <- c("anndata.core.anndata.AnnData", "python.builtin.object")
+    if (!(FALSE %in% (class(adata) == AnnDataClass))) {
         write("Parsing the input AnnData...", stdout())
     } else {
         stop("Please input a Python AnnData object. ")
