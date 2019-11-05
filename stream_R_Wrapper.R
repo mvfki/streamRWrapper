@@ -11,7 +11,7 @@
 #setwd('/mnt/d/BU_MS_BF/camplab/work/git/streamRWrapper/')
 if("reticulate" %in% rownames(installed.packages()) == FALSE) {
     install.packages('reticulate')
-    }
+}
 library(reticulate)
 use_condaenv(condaenv = 'STREAM', required = TRUE)
 Sys.setenv(LD_LIBRARY_PATH="~/.conda/envs/STREAM/lib/")
@@ -28,18 +28,18 @@ library('SingleCellExperiment')
 #####Functions that work and might be useful####################################
 
 convertAdata <- function(PyAnnData) {
-    # This function creates an RAnnData Object from the given AnnData from 
+    # This function returns an RAnnData Object from the given AnnData from
     # Python. The structure imitates the Python style. 
     RAnnData <- new("RAnnData", X = PyAnnData$X, obs = PyAnnData$obs, 
                     var = PyAnnData$var, uns = PyAnnData$uns, 
                     obsm = PyAnnData$obsm$as_dict())
     return(RAnnData)
 }
+
 setClass("RAnnData", slots = c(X = "matrix", obs = "data.frame", 
                                var = 'data.frame', uns = 'list', obsm = 'list'))
 
 plotUMAP2D <- function(Adata) {
-    # This function plots the STREAM style UMAP visualization in R
     if ((class(Adata) == c("anndata.core.anndata.AnnData", 
                            "python.builtin.object"))[1] && 
         (class(Adata) == c("anndata.core.anndata.AnnData", 
@@ -48,7 +48,7 @@ plotUMAP2D <- function(Adata) {
         if (is.null(adata$obsm$get('X_vis_umap'))) {
             write('Calculating...', stdout())
             # TODO support other methods later
-            st$plot_visualization_2D(Adata, method = method)
+            st$plot_visualization_2D(Adata)
         } else {
         }
         write('Importing calculated UMAP visualization', stdout())
@@ -88,8 +88,8 @@ adata2sce <- function(PyAnnData) {
         stop("Please input a Python AnnData object. ")
     }
     # The matrix. Since SCE requires the dimension should match at many places, 
-    # only the filtered information will be added rather than the raw count of 
-    # all cells and genes before filtration. 
+    # only the filtered information will be added rather than the raw count of
+    # all cells and genes before filtration
     calculatedMatrix <- data.frame(t(PyAnnData$X), 
                                    row.names = PyAnnData$var_names$to_list())
     colnames(calculatedMatrix) <- PyAnnData$obs_names$to_list()
@@ -99,10 +99,12 @@ adata2sce <- function(PyAnnData) {
     filteredRowNames <- row.names(calculatedMatrix)
     filteredColNames <- colnames(calculatedMatrix)
     filteredRawCount <- rawCount[filteredRowNames, filteredColNames]
+
     sce <- SingleCellExperiment(assays = 
                                     list(counts = as.matrix(filteredRawCount), 
                                          stream_matrix = 
                                              as.matrix(calculatedMatrix)))
+
     # For gene information
     genes <- PyAnnData$var_names$to_list()
     gene_ids <- PyAnnData$var$gene_ids
@@ -139,15 +141,18 @@ adata2sce <- function(PyAnnData) {
     #colData(sce) <- list(barcodes = cells, label = label, 
     #                     label_color = label_color, n_counts = n_counts, 
     #                     n_genes = n_genes)
-    # Other calculation results
-    # TODO: add things in PyAnnData$obsm; Be careful if SingleCellExperiment 
-    # objectrequires dimension match. 
-    
+    # Other calculation results, such as the reduceDim information
+
+    obsmList <- adata$obsm$as_dict()
+    obsmKeys <- names(obsmList)
+    for (i in 1:length(obsmKeys)) {
+        dataName <- paste('STREAM', obsmKeys[i], sep = '_')
+        sce@reducedDims[[dataName]] <- t(adata$obsm$get(obsmKeys[i]))
+    }
+
     return(sce)
 }
-
 #TODO: Check for plotting method that works from SingleCellExperiment object.
-
 #####Pipeline###################################################################
 adata <- st$read('testData_real/matrix.mtx', file_format = 'mtx')
 st$add_cell_labels(adata, file_name = 'testData_real/cell_label.tsv')
