@@ -49,7 +49,7 @@ plot_AnnData_UMAP_2D <- function(AnnData) {
         stop("Please give a correct AnnData Object.")
     }
     if (is.factor(allColors)) {
-        # In R 3.6.1, the allColors extracted is a Factor object. 
+        # With dev-ver reticulate, the allColors extracted is a Factor object. 
         c <- array()
         colorNames <- levels(allColors)
         for (i in 1:length(colorNames)) {
@@ -107,9 +107,11 @@ adata2sce <- function(AnnData) {
     var <- as.list(AnnData$var)
     sce@int_elementMetadata@rownames <- genes
     sce@int_elementMetadata@listData <- var
+    # The following two line might not be allowed in R 3.6.1
+    sce@elementMetadata@rownames <- genes
+    sce@elementMetadata@listData <- var
+    
     rowData(sce) <- var
-    #rowData(sce) <- list(gene_ids = gene_ids, n_counts = n_counts, 
-    #                     n_cells = n_cells)
     
     # For cell information
     cells <- AnnData$obs_names$to_list()
