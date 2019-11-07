@@ -12,12 +12,13 @@ plot_AnnData_UMAP_2D <- function(AnnData) {
     if (!(FALSE %in% (class(AnnData) == AnnDataClass))) {
         # Condition that the input annData is the Python AnnData Object. 
         if (is.null(AnnData$obsm$get('X_vis_umap'))) {
+            library(reticulate)
+            st <- import('stream')
             # Since environmental issue not solved yet, I can't support invoking
             # STREAM to calculate it automatically.
-            stop('UMAP not calculated yet.')
-            #write('Calculating...', stdout())
+            write('Calculating...', stdout())
             # TODO support other methods later
-            #st$plot_visualization_2D(AnnData)
+            st$plot_visualization_2D(AnnData)
         } 
         write('Importing calculated UMAP visualization', stdout())
         Vis <- AnnData$obsm$get("X_vis_umap")
