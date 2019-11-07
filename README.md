@@ -19,18 +19,24 @@ Before this, **make sure** you check `which python` and `which pip` which are su
 git clone https://github.com/pinellolab/STREAM.git
 cd STREAM
 python setup.py install --user
-pip install -r pip_requirements.txt
+pip install -r pip_requirements.txt --user
 ```
-The most possible missing packages are listed in pip_requirements.txt, but there can also be other missing ones for different users. You might need to install them by yourself.  
-After these, try import STREAM from Python
+The most possible missing packages are listed in `pip_requirements.txt`, but there can also be other missing ones for different users. You might need to install them by yourself.  
+After these, try import STREAM from Python to check if the installation is done.
 ```
 $ python
 >>> import stream as st
 ```
 If there is R shared library not found issue, try `echo $LD_LIBRARY_PATH` to see if the R shared library path is appended in your system. If not, append it.
 ```
-LD_LIBRARY_PATH=PATH/TO/R/lib:$LD_LIBRARY_PATH
+$ LD_LIBRARY_PATH=PATH/TO/R/lib:$LD_LIBRARY_PATH
 ```
-
+## Installation
+In R, install the package from this repository with `devtools`:  
+```
+library(devtools)
+install_github('mvfki/streamRWrapper')
+```
+This would only work when I set the repo to public. 
 ## Features  
-In `stream_R_Wrapper.R`, there is a pipeline that follows the [STREAM suggestions](https://nbviewer.jupyter.org/github/pinellolab/STREAM/blob/master/tutorial/1.STREAM_scRNA-seq.ipynb?flush_cache=true), and functions such as one for converting an Python [AnnData](https://github.com/theislab/anndata) object to R's [SingleCellExperiment](https://bioconductor.org/packages/devel/bioc/vignettes/SingleCellExperiment/inst/doc/intro.html) object which is widely used. 
+In `stream_R_Wrapper.R`, there is the minimum steps to load the necessary environment, a pipeline for `testData_real/` that follows the [STREAM suggestions](https://nbviewer.jupyter.org/github/pinellolab/STREAM/blob/master/tutorial/1.STREAM_scRNA-seq.ipynb?flush_cache=true), and functions such as one for converting an Python [AnnData](https://github.com/theislab/anndata) object to R's [SingleCellExperiment](https://bioconductor.org/packages/devel/bioc/vignettes/SingleCellExperiment/inst/doc/intro.html) object which is widely used. All the functions can be installed with packaging. 
