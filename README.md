@@ -6,7 +6,7 @@ Wraps Python3 functions into R commands so that people can run STREAM based sing
 reference link: https://github.com/pinellolab/STREAM  
 Since there might be a conflict between Anaconda3 based environment VS computation cluster pre-installed modules, here two approaches to the installation are provided. If you work with R from Anaconda3, install STREAM with `conda`, elif you work with pre-installed R module, you might need to go for the manual pip installation.
 #### Installation with Anaconda3
-```
+```console
 $ conda config --add channels defaults
 $ conda config --add channels bioconda
 $ conda config --add channels conda-forge
@@ -15,27 +15,27 @@ $ conda activate STREAM
 ```
 #### Conda free installation
 Before this, **make sure** you check `which python` and `which pip` which are supposed to show you the path of the pre-installed modules. 
-```
-git clone https://github.com/pinellolab/STREAM.git
-cd STREAM
-python setup.py install --user
-pip install -r pip_requirements.txt --user
+```console
+$ git clone https://github.com/pinellolab/STREAM.git
+$ cd STREAM
+$ python setup.py install --user
+$ pip install -r pip_requirements.txt --user
 ```
 The most possible missing packages are listed in `pip_requirements.txt`, but there can also be other missing ones for different users. You might need to install them by yourself.  
 After these, try import STREAM from Python to check if the installation is done.
-```
+```console
 $ python
 >>> import stream as st
 ```
 If there is R shared library not found issue, try `echo $LD_LIBRARY_PATH` to see if the R shared library path is appended in your system. If not, append it.
-```
+```console
 $ LD_LIBRARY_PATH=PATH/TO/R/lib:$LD_LIBRARY_PATH
 ```
 ## Installation
 In R, install the package from this repository with `devtools`:  
-```
-library(devtools)
-install_github('mvfki/streamRWrapper')
+```{r}
+> library(devtools)
+> install_github('mvfki/streamRWrapper')
 ```
 This would only work when I set the repo to public. 
 ## Features  
