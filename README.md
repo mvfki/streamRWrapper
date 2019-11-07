@@ -19,11 +19,8 @@ Before this, **make sure** you check `which python` and `which pip` which are su
 git clone https://github.com/pinellolab/STREAM.git
 cd STREAM
 python setup.py install --user
-pip install python-slugify --user
-pip install rpy2 --user
-pip install anndata --user
-# Above are the most possible missing packages that you need to manually install. 
-# There might be other dependencies you need to manually insntall with pip.
+pip install -r pip_requirements.txt
+# The most possible missing packages are listed in pip_requirements.txt, but there can also be other missing ones for different users. You might need to install them by yourself.
 ```
 After these, try import STREAM from Python
 ```
