@@ -21,7 +21,14 @@ cd STREAM
 python setup.py install --user
 pip install python-slugify --user
 pip install rpy2 --user
+pip install anndata --user
+# Above are the most possible missing packages that you need to manually install. 
 # There might be other dependencies you need to manually insntall with pip.
+```
+After these, try import STREAM from Python
+```
+$ python
+>>> import stream as st
 ```
 If there is R shared library not found issue, try `echo $LD_LIBRARY_PATH` to see if the R shared library path is appended in your system. If not, append it.
 ```
