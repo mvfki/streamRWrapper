@@ -1,10 +1,10 @@
 # THIS SCRIPT IS STILL A TEST NOTE
 
-# Basically with package "reticulate", I can call most of the Python functions 
-# from R. I guess now what I want to do is to just run the same thing here and 
-# reproduce the results that I can get from directly running in Python. 
+# Basically with package "reticulate", I can call most of the Python functions
+# from R. I guess now what I want to do is to just run the same thing here and
+# reproduce the results that I can get from directly running in Python.
 # Next thing to do is to make things more R, including converting Python Objects
-# saved visualizable in R, callable with R functions. 
+# saved visualizable in R, callable with R functions.
 
 #####Load basic environment and packages########################################
 
@@ -22,25 +22,24 @@ if (!requireNamespace("BiocManager", quietly = TRUE)) {
 }
 if(!requireNamespace("SingleCellExperiment", quietly = TRUE)) {
     BiocManager::install('SingleCellExperiment')
-} 
+}
 library(SingleCellExperiment)
 
 ## Import package
-anndata <- import('anndata')
-bal1 <- anndata$read_h5ad("/usr3/graduate/wangych/camplab/work/bal1/bal1_defaultPara.h5ad")
+st <- import('stream')
 
 #####Functions that work and might be useful####################################
 plot_AnnData_UMAP_2D <- function(AnnData) {
-	# This function extract the precomputed UMAP visualization coordinates and 
-	# plot in R space. 
+	# This function extract the precomputed UMAP visualization coordinates and
+	# plot in R space.
     AnnDataClass <- c("anndata.core.anndata.AnnData", "python.builtin.object")
     if (!(FALSE %in% (class(AnnData) == AnnDataClass))) {
-        # Condition that the input annData is the Python AnnData Object. 
+        # Condition that the input annData is the Python AnnData Object.
         if (is.null(AnnData$obsm$get('X_vis_umap'))) {
             write('Calculating...', stdout())
             # TODO support other methods later
             st$plot_visualization_2D(AnnData)
-        } 
+        }
         write('Importing calculated UMAP visualization', stdout())
         Vis <- AnnData$obsm$get("X_vis_umap")
         uniqLabels <- unique(AnnData$obs$label)
@@ -49,7 +48,7 @@ plot_AnnData_UMAP_2D <- function(AnnData) {
         stop("Please give a correct AnnData Object.")
     }
     if (is.factor(allColors)) {
-        # With dev-ver reticulate, the allColors extracted is a Factor object. 
+        # With dev-ver reticulate, the allColors extracted is a Factor object.
         c <- array()
         colorNames <- levels(allColors)
         for (i in 1:length(colorNames)) {
@@ -58,49 +57,49 @@ plot_AnnData_UMAP_2D <- function(AnnData) {
         allColors <- c
     }
     par(mar = c(3, 3, 1, 1))
-    plot(Vis[,1], Vis[,2], pch = 16, cex=0.8, col = allColors, xlab = '', 
+    plot(Vis[,1], Vis[,2], pch = 16, cex=0.8, col = allColors, xlab = '',
          ylab = '')
-    legend("topright", legend = uniqLabels, pch = 16, col = unique(allColors), 
+    legend("topright", legend = uniqLabels, pch = 16, col = unique(allColors),
            bty = 'n', cex=0.8)
 }
 
 adata2sce <- function(AnnData) {
-    # Wrap a Python anndata.AnnData object to SingleCellExperiment object. 
+    # Wrap a Python anndata.AnnData object to SingleCellExperiment object.
     # I know there is a module called anndata2ri but ...
-    
-    # First check if the input data is parsable. 
+
+    # First check if the input data is parsable.
     AnnDataClass <- c("anndata.core.anndata.AnnData", "python.builtin.object")
     if (!(FALSE %in% (class(AnnData) == AnnDataClass))) {
         write("Parsing the input AnnData...", stdout())
     } else {
         stop("Please input a Python AnnData object. ")
     }
-    
-    # The matrix. Since SCE requires the dimension should match at many places, 
+
+    # The matrix. Since SCE requires the dimension should match at many places,
     # only the filtered information will be added rather than the raw count of
     # all cells and genes before filtration
-    calculatedMatrix <- data.frame(t(AnnData$X), 
+    calculatedMatrix <- data.frame(t(AnnData$X),
                                    row.names = AnnData$var_names$to_list())
     if (!is.null(AnnData$raw)) {
         colnames(calculatedMatrix) <- AnnData$obs_names$to_list()
-        rawCount <- data.frame(t(AnnData$raw$X), 
+        rawCount <- data.frame(t(AnnData$raw$X),
                                row.names = AnnData$raw$var_names$to_list())
         colnames(rawCount) <- AnnData$raw$obs_names$to_list()
         filteredRowNames <- row.names(calculatedMatrix)
         filteredColNames <- colnames(calculatedMatrix)
         filteredRawCount <- rawCount[filteredRowNames, filteredColNames]
-        sce <- SingleCellExperiment(assays = 
-                                      list(counts = as.matrix(filteredRawCount), 
-                                           stream_matrix = 
-                                             as.matrix(calculatedMatrix)), 
+        sce <- SingleCellExperiment(assays =
+                                      list(counts = as.matrix(filteredRawCount),
+                                           stream_matrix =
+                                             as.matrix(calculatedMatrix)),
                                     reducedDims = AnnData$obsm$as_dict())
     } else {
-        sce <- SingleCellExperiment(assays = 
-                                        list(stream_matrix = 
-                                                 as.matrix(calculatedMatrix)), 
+        sce <- SingleCellExperiment(assays =
+                                        list(stream_matrix =
+                                                 as.matrix(calculatedMatrix)),
                                     reducedDims = AnnData$obsm$as_dict())
     }
-    
+
 
     # For gene information
     genes <- AnnData$var_names$to_list()
@@ -110,9 +109,9 @@ adata2sce <- function(AnnData) {
     # The following two line might not be allowed in R 3.6.1
     sce@elementMetadata@rownames <- genes
     sce@elementMetadata@listData <- var
-    
+
     rowData(sce) <- var
-    
+
     # For cell information
     cells <- AnnData$obs_names$to_list()
     obs <- as.list(AnnData$obs)
@@ -137,7 +136,7 @@ st$remove_mt_genes(adata)
 st$normalize_per_cell(adata)
 st$log_transform(adata)
 st$filter_cells(adata)
-# In small test case use 1L, in real test case use 5L. 
+# In small test case use 1L, in real test case use 5L.
 st$filter_genes(adata, min_num_cells = max(5L, adata$n_obs * 0.001))
 st$select_variable_genes(adata, n_genes = min(2000L, adata$n_vars))
 st$dimension_reduction(adata, nb_pct = 0.01)
