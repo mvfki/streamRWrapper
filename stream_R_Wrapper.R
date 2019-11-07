@@ -20,14 +20,14 @@ library(reticulate)
 if (!requireNamespace("BiocManager", quietly = TRUE)) {
     install.packages("BiocManager")
 }
-if("SingleCellExperiment" %in% rownames(installed.packages()) == FALSE) {
+if(!requireNamespace("SingleCellExperiment", quietly = TRUE)) {
     BiocManager::install('SingleCellExperiment')
 } 
 library(SingleCellExperiment)
 
 ## Import package
-st <- import('stream')
 anndata <- import('anndata')
+bal1 <- anndata$read_h5ad("/usr3/graduate/wangych/camplab/work/bal1/bal1_defaultPara.h5ad")
 
 #####Functions that work and might be useful####################################
 plot_AnnData_UMAP_2D <- function(AnnData) {
@@ -48,6 +48,15 @@ plot_AnnData_UMAP_2D <- function(AnnData) {
     } else {
         stop("Please give a correct AnnData Object.")
     }
+    if (is.factor(allColors)) {
+        # In R 3.6.1, the allColors extracted is a Factor object. 
+        c <- array()
+        colorNames <- levels(allColors)
+        for (i in 1:length(colorNames)) {
+            c[which(allColors == colorNames[i])] <- colorNames[i]
+        }
+        allColors <- c
+    }
     par(mar = c(3, 3, 1, 1))
     plot(Vis[,1], Vis[,2], pch = 16, cex=0.8, col = allColors, xlab = '', 
          ylab = '')
@@ -61,7 +70,7 @@ adata2sce <- function(AnnData) {
     
     # First check if the input data is parsable. 
     AnnDataClass <- c("anndata.core.anndata.AnnData", "python.builtin.object")
-    if (!(FALSE %in% (class(adata) == AnnDataClass))) {
+    if (!(FALSE %in% (class(AnnData) == AnnDataClass))) {
         write("Parsing the input AnnData...", stdout())
     } else {
         stop("Please input a Python AnnData object. ")
@@ -72,26 +81,35 @@ adata2sce <- function(AnnData) {
     # all cells and genes before filtration
     calculatedMatrix <- data.frame(t(AnnData$X), 
                                    row.names = AnnData$var_names$to_list())
-    colnames(calculatedMatrix) <- AnnData$obs_names$to_list()
-    rawCount <- data.frame(t(AnnData$raw$X), 
-                           row.names = AnnData$raw$var_names$to_list())
-    colnames(rawCount) <- AnnData$raw$obs_names$to_list()
-    filteredRowNames <- row.names(calculatedMatrix)
-    filteredColNames <- colnames(calculatedMatrix)
-    filteredRawCount <- rawCount[filteredRowNames, filteredColNames]
-    sce <- SingleCellExperiment(assays = 
-                                    list(counts = as.matrix(filteredRawCount), 
-                                         stream_matrix = 
+    if (!is.null(AnnData$raw)) {
+        colnames(calculatedMatrix) <- AnnData$obs_names$to_list()
+        rawCount <- data.frame(t(AnnData$raw$X), 
+                               row.names = AnnData$raw$var_names$to_list())
+        colnames(rawCount) <- AnnData$raw$obs_names$to_list()
+        filteredRowNames <- row.names(calculatedMatrix)
+        filteredColNames <- colnames(calculatedMatrix)
+        filteredRawCount <- rawCount[filteredRowNames, filteredColNames]
+        sce <- SingleCellExperiment(assays = 
+                                      list(counts = as.matrix(filteredRawCount), 
+                                           stream_matrix = 
                                              as.matrix(calculatedMatrix)), 
-                                reducedDims = adata$obsm$as_dict())
+                                    reducedDims = AnnData$obsm$as_dict())
+    } else {
+        sce <- SingleCellExperiment(assays = 
+                                        list(stream_matrix = 
+                                                 as.matrix(calculatedMatrix)), 
+                                    reducedDims = AnnData$obsm$as_dict())
+    }
+    
 
     # For gene information
     genes <- AnnData$var_names$to_list()
     var <- as.list(AnnData$var)
     sce@int_elementMetadata@rownames <- genes
     sce@int_elementMetadata@listData <- var
-    rowData(sce) <- list(gene_ids = gene_ids, n_counts = n_counts, 
-                         n_cells = n_cells)
+    rowData(sce) <- var
+    #rowData(sce) <- list(gene_ids = gene_ids, n_counts = n_counts, 
+    #                     n_cells = n_cells)
     
     # For cell information
     cells <- AnnData$obs_names$to_list()
