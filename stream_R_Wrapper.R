@@ -29,19 +29,28 @@ library(SingleCellExperiment)
 st <- import('stream')
 
 #####Functions that work and might be useful####################################
-plot_AnnData_UMAP_2D <- function(AnnData) {
+plot_AnnData_UMAP_2D <- function(AnnData, method = "umap", save_fig = FALSE,
+                                 fig_name = "visualization_2D.pdf") {
 	# This function extract the precomputed UMAP visualization coordinates and
 	# plot in R space.
     AnnDataClass <- c("anndata.core.anndata.AnnData", "python.builtin.object")
     if (!(FALSE %in% (class(AnnData) == AnnDataClass))) {
         # Condition that the input annData is the Python AnnData Object.
-        if (is.null(AnnData$obsm$get('X_vis_umap'))) {
-            write('Calculating...', stdout())
-            # TODO support other methods later
-            st$plot_visualization_2D(AnnData)
+        if (method == "umap") {
+            obsmKey <- "X_vis_umap"
+        } else if (method == "tsne") {
+            obsmKey <- "X_vis_tsne"
+        } else {
+            stop("Only 'umap' and 'tsne' supported for the plotting method.")
         }
-        write('Importing calculated UMAP visualization', stdout())
-        Vis <- AnnData$obsm$get("X_vis_umap")
+        st$plot_visualization_2D(AnnData, method = method,
+                                 save_fig = save_fig,
+                                 fig_name = paste("STREAM", method,
+                                                  fig_name, sep = "_"))
+        write(paste('Importing calculated', method,
+                    'visualization', sep = ' '),
+              stdout())
+        Vis <- AnnData$obsm$get(obsmKey)
         uniqLabels <- unique(AnnData$obs$label)
         allColors <- AnnData$obs$label_color
     } else {
@@ -100,7 +109,6 @@ adata2sce <- function(AnnData) {
                                     reducedDims = AnnData$obsm$as_dict())
     }
 
-
     # For gene information
     genes <- AnnData$var_names$to_list()
     var <- as.list(AnnData$var)
@@ -138,7 +146,10 @@ st$log_transform(adata)
 st$filter_cells(adata)
 # In small test case use 1L, in real test case use 5L.
 st$filter_genes(adata, min_num_cells = max(5L, adata$n_obs * 0.001))
-st$select_variable_genes(adata, n_genes = min(2000L, adata$n_vars))
+st$select_variable_genes(adata, n_genes = min(2000L, adata$n_vars),
+                         save_fig = TRUE)
+# By specifying save_fig to TRUE, a file called stream_result/std_vs_mean.pdf is
+# saved at your working directory.
 st$dimension_reduction(adata, nb_pct = 0.01)
 plot_AnnData_UMAP_2D(adata)
 sce <- adata2sce(adata)
