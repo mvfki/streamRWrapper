@@ -29,10 +29,12 @@ library(SingleCellExperiment)
 st <- import('stream')
 
 #####Functions that work and might be useful####################################
-plot_AnnData_UMAP_2D <- function(AnnData, method = "umap", save_fig = FALSE,
+plot_AnnData_UMAP_2D <- function(AnnData, method = "umap",
+                                 label_by_cluster = FALSE, n_cluster = 15,
+                                 save_fig = FALSE,
                                  fig_name = "visualization_2D.pdf") {
-	# This function extract the precomputed UMAP visualization coordinates and
-	# plot in R space.
+	# This function imports the STREAM style UMAP/tSNE visualization
+    # coordinates and plot them in R space.
     AnnDataClass <- c("anndata.core.anndata.AnnData", "python.builtin.object")
     if (!(FALSE %in% (class(AnnData) == AnnDataClass))) {
         # Condition that the input annData is the Python AnnData Object.
@@ -65,11 +67,45 @@ plot_AnnData_UMAP_2D <- function(AnnData, method = "umap", save_fig = FALSE,
         }
         allColors <- c
     }
+    if (label_by_cluster) {
+        # If we want tot label the umap by clustering for removing the outliers
+        cl <- kmeans(Vis, n_cluster)
+        palette <- rainbow(n_cluster)
+        allColors <- palette[cl$cluster]
+    }
     par(mar = c(3, 3, 1, 1))
     plot(Vis[,1], Vis[,2], pch = 16, cex=0.8, col = allColors, xlab = '',
          ylab = '')
-    legend("topright", legend = uniqLabels, pch = 16, col = unique(allColors),
-           bty = 'n', cex=0.8)
+    if (label_by_cluster) {
+        text(cl$centers[,1], cl$centers[,2], labels = 1:n_cluster)
+        return(cl$cluster)
+    } else {
+        legend("topright", legend = uniqLabels, pch = 16, col = unique(allColors),
+               bty = 'n', cex=0.8)
+    }
+}
+
+remove_clusters_from_AnnData <- function(AnnData, clusters, ToRemove,
+                                         plotCheck = FALSE,
+                                         plotCheckMethod = 'umap') {
+    AnnDataClass <- c("anndata.core.anndata.AnnData", "python.builtin.object")
+    if (!(FALSE %in% (class(AnnData) == AnnDataClass))) {
+        stopifnot(AnnData$n_obs == length(clusters))
+        cellToRemove <- c()
+        for (i in 1:length(ToRemove)) {
+            cellToRemove <- c(cellToRemove, which(clusters == ToRemove[i]))
+        }
+        # Now in cellToRemove, they are the 1-based index of the cell to remove,
+        # be careful when operating the AnnData since python index is 0-based.
+        cellToRemove <- unique(sort(cellToRemove))
+        remain <- setdiff(1:AnnData$n_obs, cellToRemove)
+        AnnData$'_inplace_subset_obs'(remain - 1L)
+        if (plotCheck) {
+            plot_AnnData_UMAP_2D(AnnData, method = plotCheckMethod)
+        }
+    } else {
+        stop("Please give a correct AnnData Object.")
+    }
 }
 
 adata2sce <- function(AnnData) {
@@ -148,9 +184,12 @@ st$filter_cells(adata)
 st$filter_genes(adata, min_num_cells = max(5L, adata$n_obs * 0.001))
 st$select_variable_genes(adata, n_genes = min(2000L, adata$n_vars),
                          save_fig = TRUE)
-# By specifying save_fig to TRUE, a file called stream_result/std_vs_mean.pdf is
-# saved at your working directory.
+# By specifying save_fig to TRUE, a file called 'stream_result/std_vs_mean.pdf'
+# is saved at your working directory.
 st$dimension_reduction(adata, nb_pct = 0.01)
 plot_AnnData_UMAP_2D(adata)
+clusters <- plot_AnnData_UMAP_2D(adata_backup, label_by_cluster = TRUE,
+                                 n_cluster = 30)
+remove_clusters_from_AnnData(adata, clusters, c(10, 8), plotCheck = TRUE)
 sce <- adata2sce(adata)
 #####DEBUGGING AREA#############################################################
