@@ -14,7 +14,7 @@
 #' @examples
 #' clusters <- plot_AnnData_UMAP_2D(adata, label_by_cluster = TRUE, 
 #'                                  n_cluster = 30)
-#' remove_clusters_from_AnnData(adata, clusters, c(18, 29), )
+#' remove_clusters_from_AnnData(adata, clusters, c(18, 29), plotCheck = TRUE)
 remove_clusters_from_AnnData <- function(AnnData, clusters, ToRemove,
                                          plotCheck = FALSE,
                                          plotCheckMethod = 'umap') {
