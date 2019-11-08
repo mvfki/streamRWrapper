@@ -2,16 +2,37 @@
 % Please edit documentation in R/plot_AnnData_UMAP_2D.R
 \name{plot_AnnData_UMAP_2D}
 \alias{plot_AnnData_UMAP_2D}
-\title{Plot a 2D UMAP in the same way that STREAM plots.}
+\title{Plot 2D visualization in STREAM style}
 \usage{
-plot_AnnData_UMAP_2D(AnnData)
+plot_AnnData_UMAP_2D(AnnData, method = "umap",
+  label_by_cluster = FALSE, n_cluster = 15L, save_fig = FALSE,
+  fig_name = "visualization_2D.pdf")
 }
 \arguments{
-\item{AnnData}{A Python anndata.AnnData object that has 
-anndata.AnnData.obsm['X_vis_umap'] value}
+\item{AnnData}{A Python anndata.AnnData object.}
+
+\item{method}{Character, default "umap". The calculation method for the 2D
+visualization}
+
+\item{label_by_cluster}{Boolean, default FALSE. Whether to plot with
+clustering labels.}
+
+\item{n_cluster}{int, default 15L. Number of clusters when plot with labels
+of clusters.}
+
+\item{save_fig}{Boolean, default FALSE. Whether to save the plot
+automatically.}
+
+\item{fig_name}{character, default "STREAM_<method>_visualization_2D.pdf".}
+}
+\value{
+clusters. Will be `NULL`` unless `label_by_cluster` is set to `TRUE`.
+An array of int, each of which specifies the cluster a cell belongs to.
 }
 \description{
-Plot a 2D UMAP in the same way that STREAM plots.
+This function imports the STREAM style UMAP/tSNE visualization coordinates
+and plot them in R space. Alternatively, the plot can be labeled by a naive
+K-Means clustering in order to remove small outlier cell groups.
 }
 \examples{
 plot_AnnData_UMAP_2D(adata)
