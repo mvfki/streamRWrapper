@@ -10,7 +10,8 @@
 #' from the AnnData. 
 #' @param plotCheckMethod Character, default "umap", can only be chosen from 
 #' "umap" and "tsne". This would serve as the `method` argument when this 
-#' function internally calls `plot_AnnData_UMAP_2D(adata, method = plotCheckMethod)`.
+#' function internally calls `plot_AnnData_UMAP_2D(adata, method = plotCheckMethod)`. 
+#' @export
 #' @examples
 #' clusters <- plot_AnnData_UMAP_2D(adata, label_by_cluster = TRUE, 
 #'                                  n_cluster = 30)

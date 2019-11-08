@@ -133,12 +133,14 @@ adata2sce <- function(AnnData) {
         filteredRowNames <- row.names(calculatedMatrix)
         filteredColNames <- colnames(calculatedMatrix)
         filteredRawCount <- rawCount[filteredRowNames, filteredColNames]
+        # ReducedDim has dim n_cells x n_features, DIFFERENT from assay
         sce <- SingleCellExperiment(assays =
                                       list(counts = as.matrix(filteredRawCount),
                                            stream_matrix =
                                              as.matrix(calculatedMatrix)),
                                     reducedDims = AnnData$obsm$as_dict())
     } else {
+        #TODO BUG!!! transpose the matrix!
         sce <- SingleCellExperiment(assays =
                                         list(stream_matrix =
                                                  as.matrix(calculatedMatrix)),
@@ -165,10 +167,66 @@ adata2sce <- function(AnnData) {
         sce@int_colData@listData[[names(obs)[i]]] <- obs[[names(obs)[i]]]
         sce@colData@listData[[names(obs)[i]]] <- obs[[names(obs)[i]]]
     }
+    metadata <- list()
+    uns_names <- names(AnnData$uns)
+    for (i in 1:length(uns_names)) {
+        data <- AnnData$uns[[uns_names[i]]]
+        if (class(data) == "character") {
+            sce@metadata[[uns_names[i]]] <- data
+        } else if (class(data) == "list") {
+            sce@metadata[[uns_names[i]]] <- data
+        } else {
+            dataConvert <- try(data$to_list(), silent = TRUE)
+            if (uns_names[i] == 'var_genes') {
+                print(paste(uns_names[i], class(dataConvert), sep = ': '))
+            }
+            if (class(dataConvert) == "try-error") {
+                sce@metadata[[uns_names[i]]] <- py_attr2list(data)
+            } else {
+                sce@metadata[[uns_names[i]]] <- dataConvert
+            }
+        }
+    }
 
     return(sce)
 }
 #TODO: Check for plotting method that works from SingleCellExperiment object.
+
+pyAttr2List <- function(py_object, silent = FALSE) {
+    if (!"python.builtin.object" %in% class(py_object)) {
+        if (!silent) {
+            write('Input object is not identified as Python object. Skipped')
+        }
+        return(py_object)
+    } else {
+        pyBuiltins <- reticulate::import_builtins()
+        allAttr <- pyBuiltins$dir(py_object)
+        output <- list()
+        for (i in 1:length(allAttr)) {
+            if (!substring(allAttr[i], 1, 1) == "_") {
+                # Condition for not an private method
+                value <- py_object[[allAttr[i]]]
+                if (!"python.builtin.object" %in% class(value)) {
+                    output[[allAttr[i]]] <- value
+                } else {
+                    if (!"python.builtin.method" %in% class(value)) {
+                        dataCoverted <- try(value$to_list(), silent = TRUE)
+                        if (!class(dataCoverted) == 'try-error') {
+                            output[[allAttr[i]]] <- dataCoverted
+                        } else {
+                            strRepr <- pyBuiltins$str(value)
+                            if (!strRepr == "None") {
+                                output[[allAttr[i]]] <- strRepr
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return(output)
+    }
+}
+
 
 #####Pipeline###################################################################
 adata <- st$read('testData_real/matrix.mtx', file_format = 'mtx')
@@ -188,8 +246,30 @@ st$select_variable_genes(adata, n_genes = min(2000L, adata$n_vars),
 # is saved at your working directory.
 st$dimension_reduction(adata, nb_pct = 0.01)
 plot_AnnData_UMAP_2D(adata)
-clusters <- plot_AnnData_UMAP_2D(adata_backup, label_by_cluster = TRUE,
+clusters <- plot_AnnData_UMAP_2D(adata, label_by_cluster = TRUE,
                                  n_cluster = 30)
-remove_clusters_from_AnnData(adata, clusters, c(10, 8), plotCheck = TRUE)
+remove_clusters_from_AnnData(adata, clusters, c(3, 18, 21), plotCheck = TRUE)
 sce <- adata2sce(adata)
 #####DEBUGGING AREA#############################################################
+anndata <- import('anndata')
+sce2adata <- function(SCE, assay = 'counts', save_h5ad = FALSE, h5ad_filename = NULL) {
+    # Transfer SCE object back to AnnData
+    # Argument check first
+    stopifnot(class(SCE) == "SingleCellExperiment")
+    if (save_h5ad) {
+        stopifnot(!is.null(h5ad_filename))
+    }
+    # Extract information that correspond to AnnData structure
+    X <- t(SCE@assays$data[[assay]])
+    obs <- as.data.frame(SCE@colData)
+    var <- as.data.frame(SCE@elementMetadata)
+    AnnData <- anndata$AnnData(X = X, obs = obs, var = var)
+    # For uns
+
+    # For obsm
+    obsm_names <- names(SCE@reducedDims)
+    for (i in 1:length(obsm_names)) {
+        AnnData$obsm$'__setitem__'(obsm_names[i], sce@reducedDims[[obsm_names[i]]])
+    }
+    return(AnnData)
+}

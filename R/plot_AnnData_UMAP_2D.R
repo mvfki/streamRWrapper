@@ -14,7 +14,8 @@
 #' automatically.
 #' @param fig_name character, default "STREAM_<method>_visualization_2D.pdf".
 #' @return clusters. Will be `NULL`` unless `label_by_cluster` is set to `TRUE`.
-#' An array of int, each of which specifies the cluster a cell belongs to.
+#' An array of int, each of which specifies the cluster a cell belongs to. 
+#' @export
 #' @examples
 #' plot_AnnData_UMAP_2D(adata)
 plot_AnnData_UMAP_2D <- function(AnnData, method = "umap",
