@@ -2,5 +2,5 @@
 
 export(adata2sce)
 export(plot_AnnData_UMAP_2D)
-export(pyObjAttr2List)
+export(pyAttr2List)
 export(remove_clusters_from_AnnData)
