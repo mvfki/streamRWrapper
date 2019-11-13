@@ -1,0 +1,29 @@
+diff --git a/stream/core.py b/stream/core.py
+index aa33702..834d6bb 100755
+--- a/stream/core.py
++++ b/stream/core.py
+@@ -1719,7 +1719,7 @@ def plot_flat_tree(adata,adata_new=None,show_all_cells=True,save_fig=False,fig_p
+             fig_path = adata_new.uns['workdir']
+ 
+     flat_tree = adata.uns['flat_tree']
+-    dict_nodes_pos = nx.spring_layout(flat_tree,random_state=10)
++    dict_nodes_pos = nx.spring_layout(flat_tree, seed = 10) # previously the argument was "random_state" which existed in nx 2.1, but in SCC nx 2.3 it should be "seed
+     bfs_root = list(flat_tree.nodes())[0]
+     bfs_edges = list(nx.bfs_edges(flat_tree, bfs_root))
+     bfs_nodes = [bfs_root] + [v for u, v in bfs_edges]
+@@ -4080,7 +4080,7 @@ def plot_transition_genes(adata,num_genes = 15,
+                 ax.text(rect.get_x()-0.02, rect.get_y()+rect.get_height()/2.0, \
+                         "{:.2E}".format(Decimal(str(qvals[i]))),color='w',fontsize=9,**alignment)
+         if(save_fig):        
+-            plt.savefig(os.path.join(fig_path,'transition_genes_'+ dict_node_state[edge_i[0]]+'_'+dict_node_state[edge_i[1]]+'.pdf'),\
++            plt.savefig(os.path.join(fig_path,'transition_genes_'+ dict_node_state[edge_i[0]]+'_'+dict_node_state[edge_i[1]]+'.png'),\
+                         pad_inches=1,bbox_inches='tight')
+             plt.close(fig)    
+ 
+@@ -4851,4 +4851,4 @@ def save_web_report(adata,n_genes=5,file_name='stream_report',preference=None,
+     shutil.make_archive(base_name=os.path.join(adata.uns['workdir'],file_name), format='zip',root_dir=rootdir)
+     shutil.rmtree(rootdir)
+     os.chdir(adata.uns['workdir'])
+-    print('Done!')
+\ No newline at end of file
++    print('Done!')

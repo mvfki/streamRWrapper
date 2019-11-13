@@ -14,7 +14,7 @@
 #' automatically.
 #' @param fig_name character, default "STREAM_<method>_visualization_2D.pdf".
 #' @return clusters. Will be `NULL`` unless `label_by_cluster` is set to `TRUE`.
-#' An array of int, each of which specifies the cluster a cell belongs to. 
+#' An array of int, each of which specifies the cluster a cell belongs to.
 #' @export
 #' @examples
 #' plot_AnnData_UMAP_2D(adata)
@@ -63,8 +63,8 @@ plot_AnnData_UMAP_2D <- function(AnnData, method = "umap",
         allColors <- palette[cl$cluster]
     }
     par(mar = c(3, 3, 1, 1))
-    plot(Vis[,1], Vis[,2], pch = 16, cex=0.8, col = allColors, xlab = '',
-         ylab = '')
+    plot(Vis[,1], Vis[,2], pch = 16, cex=0.8, col = alpha(allColors, 0.5),
+         xlab = '', ylab = '')
     if (label_by_cluster) {
         text(cl$centers[,1], cl$centers[,2], labels = 1:n_cluster)
         return(cl$cluster)

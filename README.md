@@ -15,28 +15,45 @@ $ conda activate STREAM
 ```
 #### Conda free installation
 Before this, **make sure** you check `which python` and `which pip` which are supposed to show you the path of the pre-installed modules. 
-```console
-$ git clone https://github.com/pinellolab/STREAM.git
-$ cd STREAM
-$ python setup.py install --user
-$ pip install -r pip_requirements.txt --user
+```{bash}
+git clone https://github.com/pinellolab/STREAM.git
+cd STREAM
+python setup.py install --user
+pip install -r pip_requirements.txt --user
+```
+One thing that was terribly annoying is the changing argument naming in the dependency `networkx`. By default, STREAM requires networkx 2.1 (You can see this when installing from conda). However, in my preinstalled environment, networkx is under version 2.3, where there are different argument naming for equivalent values. 
+The version of your networkx can be checked by running in bash command
+```{bash}
+pip list | grep networkx
+```
+If so, I've got the solution. Run bash commands in the stream git repo directory you just cloned before you install STREAM. 
+```{bash}
+cp PATH/TO/THIS/REPO/STREAM_diff.patch ./
+git apply nxVersionCompliance.patch
 ```
 The most possible missing packages are listed in `pip_requirements.txt`, but there can also be other missing ones for different users. You might need to install them by yourself.  
 After these, try import STREAM from Python to check if the installation is done.
-```console
-$ python
->>> import stream as st
+```{python}
+import stream as st
 ```
 If there is R shared library not found issue, try `echo $LD_LIBRARY_PATH` to see if the R shared library path is appended in your system. If not, append it.
-```console
-$ LD_LIBRARY_PATH=PATH/TO/R/lib:$LD_LIBRARY_PATH
+```{bash}
+LD_LIBRARY_PATH=PATH/TO/R/lib:$LD_LIBRARY_PATH
+```
+Besides, there are also some additional R packages needed for STREAM to work. 
+```{r}
+if(!require("devtools")){
+    install.packages("devtools")
+}
+devtools::install_github("Albluca/distutils")
+devtools::install_github("Albluca/ElPiGraph.R")
 ```
 ## Installation
-In R, install the package from this repository with `devtools`:  
+In R, install the package from this repository with `devtools`:
 ```{r}
-> library(devtools)
-> install_github('mvfki/streamRWrapper')
+library(devtools)
+install_github('mvfki/streamRWrapper')
 ```
-This would only work when I set the repo to public. 
+Note that this would only work when I set the repo to public. 
 ## Features  
 In `stream_R_Wrapper.R`, there is the minimum steps to load the necessary environment, a pipeline for `testData_real/` that follows the [STREAM suggestions](https://nbviewer.jupyter.org/github/pinellolab/STREAM/blob/master/tutorial/1.STREAM_scRNA-seq.ipynb?flush_cache=true), and functions such as one for converting an Python [AnnData](https://github.com/theislab/anndata) object to R's [SingleCellExperiment](https://bioconductor.org/packages/devel/bioc/vignettes/SingleCellExperiment/inst/doc/intro.html) object which is widely used. All the functions can be installed with packaging. 
