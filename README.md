@@ -29,7 +29,7 @@ pip list | grep networkx
 If so, I've got the solution. Run bash commands in the stream git repo directory you just cloned before you install STREAM. 
 ```{bash}
 cp PATH/TO/THIS/REPO/STREAM_diff.patch ./
-git apply nxVersionCompliance.patch
+git apply STREAM_diff.patch
 ```
 The most possible missing packages are listed in `pip_requirements.txt`, but there can also be other missing ones for different users. You might need to install them by yourself.  
 After these, try import STREAM from Python to check if the installation is done.
