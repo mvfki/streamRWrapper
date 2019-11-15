@@ -13,7 +13,7 @@ adata2sce(AnnData)
 A SingleCellExperiment object
 }
 \description{
-The AnnData object here can be read from .h5ad file with the help of 
+The AnnData object here can be read from .h5ad file with the help of
 `reticulate`.
 }
 \examples{

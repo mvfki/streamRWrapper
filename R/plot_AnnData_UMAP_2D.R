@@ -35,9 +35,7 @@ plot_AnnData_UMAP_2D <- function(AnnData, method = "umap",
             stop("Only 'umap' and 'tsne' supported for the plotting method.")
         }
         st$plot_visualization_2D(AnnData, method = method,
-                                 save_fig = save_fig,
-                                 fig_name = paste("STREAM", method,
-                                                  fig_name, sep = "_"))
+                                 save_fig = save_fig, fig_name = fig_name)
         write(paste('Importing calculated', method,
                     'visualization', sep = ' '),
               stdout())

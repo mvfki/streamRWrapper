@@ -69,42 +69,55 @@ st$dimension_reduction(adata, nb_pct = 0.01)
 plot_AnnData_UMAP_2D(adata)
 clusters <- plot_AnnData_UMAP_2D(adata, label_by_cluster = TRUE,
                                  n_cluster = 30)
-remove_clusters_from_AnnData(adata, clusters, c(5, 13), plotCheck = TRUE)
+remove_clusters_from_AnnData(adata, clusters, c(14, 15, 11), plotCheck = TRUE)
 
+###
 st$seed_elastic_principal_graph(adata)
-
-st$plot_branches(adata, save_fig = TRUE, fig_name = 'branches.png')
-viewPNG('stream_result/branches.png')
-
+st$plot_branches(adata, save_fig = TRUE, fig_name = 'branches_1.png')
+viewPNG('stream_result/branches_1.png')
 st$plot_branches_with_cells(adata, save_fig = TRUE,
-                            fig_name = 'branches_with_cells.png')
-viewPNG('stream_result/branches_with_cells.png')
+                            fig_name = 'branches_with_cells_1.png')
+viewPNG('stream_result/branches_with_cells_1.png')
 
+###
 st$elastic_principal_graph(adata)
-
-st$plot_branches(adata, save_fig = TRUE, fig_name = 'branches.png')
-viewPNG('stream_result/branches.png')
-
+st$plot_branches(adata, save_fig = TRUE, fig_name = 'branches_2.png')
+viewPNG('stream_result/branches_2.png')
 st$plot_branches_with_cells(adata, save_fig = TRUE,
-                            fig_name = 'branches_with_cells.png')
-viewPNG('stream_result/branches_with_cells.png')
+                            fig_name = 'branches_with_cells_2.png')
+viewPNG('stream_result/branches_with_cells_2.png')
 
+###
 st$optimize_branching(adata)
-
-st$extend_elastic_principal_graph(adata)
-
-st$plot_branches(adata, save_fig = TRUE, fig_name = 'branches.png')
-viewPNG('stream_result/branches.png')
-
 st$plot_branches_with_cells(adata, save_fig = TRUE,
-                            fig_name = 'branches_with_cells.png')
-viewPNG('stream_result/branches_with_cells.png')
+                            fig_name = 'branches_with_cells_3.png')
+viewPNG('stream_result/branches_with_cells_3.png')
+st$plot_branches_with_cells(adata, save_fig = TRUE,
+                            fig_name = 'branches_with_cells_3.png')
+viewPNG('stream_result/branches_with_cells_3.png')
 
+###
+st$elastic_principal_graph(adata)
+st$plot_branches(adata, save_fig = TRUE, fig_name = 'branches_4.png')
+viewPNG('stream_result/branches_4.png')
+st$plot_branches_with_cells(adata, save_fig = TRUE,
+                            fig_name = 'branches_with_cells_4.png')
+viewPNG('stream_result/branches_with_cells_4.png')
+
+###
+st$extend_elastic_principal_graph(adata)
+st$plot_branches(adata, save_fig = TRUE, fig_name = 'branches_5.png')
+viewPNG('stream_result/branches_5.png')
+st$plot_branches_with_cells(adata, save_fig = TRUE,
+                            fig_name = 'branches_with_cells_5.png')
+viewPNG('stream_result/branches_with_cells_5.png')
+
+###
 st$plot_flat_tree(adata, save_fig = TRUE, fig_name = 'flat_tree.png')
 viewPNG('stream_result/flat_tree.png')
 
+# Remember to change the root of your interests
 root <- 'S0'
-
 st$subwaymap_plot(adata, root = root, save_fig = TRUE, percentile_dist = 100,
                   fig_name = 'subway_map.png')
 viewPNG(paste('stream_result', root, 'subway_map.png', sep = '/'))
@@ -120,29 +133,9 @@ leaf_genes <- adata$uns$leaf_genes
 
 st$detect_transistion_genes(adata, root = root)
 st$plot_transition_genes(adata, save_fig = TRUE)
+
 #####Wrapping test##############################################################
 sce <- adata2sce(adata)
 
 #####DEBUGGING AREA#############################################################
-anndata <- import('anndata')
-sce2adata <- function(SCE, assay = 'counts', save_h5ad = FALSE, h5ad_filename = NULL) {
-    # Transfer SCE object back to AnnData
-    # Argument check first
-    stopifnot(class(SCE) == "SingleCellExperiment")
-    if (save_h5ad) {
-        stopifnot(!is.null(h5ad_filename))
-    }
-    # Extract information that correspond to AnnData structure
-    X <- t(SCE@assays$data[[assay]])
-    obs <- as.data.frame(SCE@colData)
-    var <- as.data.frame(SCE@elementMetadata)
-    AnnData <- anndata$AnnData(X = X, obs = obs, var = var)
-    # For uns
 
-    # For obsm
-    obsm_names <- names(SCE@reducedDims)
-    for (i in 1:length(obsm_names)) {
-        AnnData$obsm$'__setitem__'(obsm_names[i], sce@reducedDims[[obsm_names[i]]])
-    }
-    return(AnnData)
-}
