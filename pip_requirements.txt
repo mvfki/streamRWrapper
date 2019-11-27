@@ -1,5 +1,5 @@
 python-slugify
-networkx
+networkx==2.1
 rpy2
 anndata
 

@@ -6,7 +6,7 @@ Authors@R:
            family = "Wang",
            role = c("aut", "cre"),
            email = "wangych@bu.edu")
-Description: https://github.com/mvfki/streamRWrapper
+Description: https://github.com/mvfki/streamRWrapper/blob/master/README.md
 Depends: R (>= 3.6.0)
 Imports:
     reticulate (>= 1.13), 
